@@ -120,7 +120,7 @@ scripts:
             - upload: ${{ENV.SCRIPT_DIR}}/hyperfoil-scripts/quarkus-otel-perf.hf.yaml ${{WORKDIR}}/hyperfoil
         - regex: remote
           then:
-            - sh: wget -q -nc ${{OBSERVABILITY_REPO_URL}}/raw/${{OBSERVABILITY_REPO_COMMIT:main}}/quarkus-observability-perf/hyperfoil-scripts/quarkus-otel-perf.hf.yaml
+            - sh: wget -q -nc ${{OBSERVABILITY_REPO_URL}}/raw/${{OBSERVABILITY_REPO_COMMIT:main}}/hyperfoil-scripts/quarkus-otel-perf.hf.yaml
 
   cleanup-hyperfoil:
     - sh: rm -fr ${{WORKDIR}}/hyperfoil
