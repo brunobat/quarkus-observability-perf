@@ -233,7 +233,7 @@ scripts:
     - add-prompt: "]$ " # Hyperfoil CLI session
     - sh: ${{WORKDIR}}/hyperfoil/hyperfoil-${{HYPERFOIL_VERSION}}/bin/cli.sh -XX:+UseNUMA
     - sh: start-local
-    - sh: upload ${{WORKDIR}}/hyperfoil-scripts/quarkus-otel-perf.hf.yaml
+    - sh: upload ${{WORKDIR}}/hyperfoil/quarkus-otel-perf.hf.yaml
     - log: Hyperfoil is performing load test against ${{CURRENT_IMPLEMENTATION}}
     - sh: run quarkus-activemq
       silent: true
