@@ -96,12 +96,10 @@ scripts:
 
   sdk-install-maven:
     - sh: which mvn
-    - regex: no mvn in
-      then:
-        - sh:
-            command: sdk install maven ${{MAVEN_VERSION:3.8.7}}
-            prompt:
-              "set as default? (Y/n): ": Y
+    - sh:
+        command: sdk install maven ${{MAVEN_VERSION:3.8.7}}
+        prompt:
+          "set as default? (Y/n): ": Y
     - sh: mvn -version
 
   # Hyperfoil setup
