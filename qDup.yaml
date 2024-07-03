@@ -260,6 +260,7 @@ scripts:
     - sh: cd ${{WORKDIR}}
     - sh: git clone -q ${{ASYNC_PROFILER_REPO_URL}} ${{WORKDIR}}/async-profiler-src && git -C ${{WORKDIR}}/async-profiler-src -c advice.detachedHead=false checkout ${{ASYNC_PROFILER_REPO_COMMIT:master}}
     - sh: cd ${{WORKDIR}}/async-profiler-src
+    - sh: sed 's/ -source 7 -target 7// g' -i Makefile
     - sh: make all
 
   server-profiling:
