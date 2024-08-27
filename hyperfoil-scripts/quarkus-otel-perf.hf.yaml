@@ -48,7 +48,7 @@ phases:
                   # waiting for the response.
                   # sync: false
           gettersFork:
-            weight: 3
+            weight: 5
             scenario:
             - getLegumesScenario:
                 - randomInt: pageIndex <- 1 .. 99
@@ -109,7 +109,7 @@ phases:
                   # sync: false
                   # We'll wait for the `completed` var to be set in this step, though.
           gettersFork:
-            weight: 3
+            weight: 5
             scenario:
             - getLegumesScenario:
                 - randomInt: pageIndex <- 1 .. 99
