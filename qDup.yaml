@@ -57,7 +57,7 @@ scripts:
             - set-state: QUARKUS_VERSION
           else:
             - abort: Failed to build Quarkus
-    - sh: ./mvnw -B -q -pl 'io.quarkus:quarkus-bom-dev-ui,io.quarkus:quarkus-bom,io.quarkus:quarkus-maven-plugin' -am install -P '!validate,!format' -DskipTests -Dmaven.repo.local=${{M2_REPO_DIR}}
+    - sh: ./mvnw -B -q -pl 'io.quarkus:quarkus-bom-dev-ui,io.quarkus:quarkus-bom,io.quarkus:quarkus-maven-plugin' -am install -P '!validate,!format' -DskipTests -Dmaven.repo.local=${{WORKDIR}}/observability-perf-src/m2-repo
 
   cleanup-observability-perf:
     - sh: rm -fr ${{WORKDIR}}/observability-perf-src
