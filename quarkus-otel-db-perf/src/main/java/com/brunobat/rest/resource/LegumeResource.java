@@ -59,9 +59,7 @@ public class LegumeResource implements LegumeApi {
 
     public List<LegumeItem> list(int pageIndex) {
 //        log.info("someone asked for a list for index: " + pageIndex);
-        return repository.listLegumes(pageIndex)
-                .map(this::getLegumeItem)
-                .collect(Collectors.toList());
+        return repository.listLegumes(pageIndex).toList();
     }
 
     private Optional<LegumeItem> find(final String legumeId) {
@@ -76,7 +74,7 @@ public class LegumeResource implements LegumeApi {
                 .description((legumeNew.getDescription()))
                 .build();
 
-        final Legume addedLegume = repository.merge(legumeToAdd);
+        final Legume addedLegume = repository.create(legumeToAdd);
         final LegumeItem legumeItem = getLegumeItem(addedLegume);
 
         return legumeItem;
