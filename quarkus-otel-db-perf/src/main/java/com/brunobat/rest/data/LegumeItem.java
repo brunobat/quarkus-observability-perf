@@ -1,7 +1,10 @@
 package com.brunobat.rest.data;
 
+import com.brunobat.rest.model.Legume;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import jakarta.validation.constraints.NotBlank;
 
+@RegisterForReflection
 public class LegumeItem {
     private String id;
 
@@ -14,6 +17,12 @@ public class LegumeItem {
         this.id = id;
         this.name = name;
         this.description = description;
+    }
+
+    public LegumeItem(Legume legume) {
+        this.id = legume.getId();
+        this.name = legume.getName();
+        this.description = legume.getDescription();
     }
 
     public LegumeItem() {
