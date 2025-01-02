@@ -15,15 +15,18 @@ public class LegumeRepository implements PanacheRepository<Legume> {
     @Inject
     EntityManager manager;
 
-    public Stream<Legume> listLegumes(int pageIndex) {
-        return find("SELECT h FROM Legume h").page(pageIndex, 16).stream();
+    public Stream<LegumeItem> listLegumes(int pageIndex) {
+        return find("SELECT h FROM Legume h")
+                .project(LegumeItem.class)
+                .page(pageIndex, 16).stream();
     }
 
     public void remove(final LegumeItem legume) {
         manager.remove(legume);
     }
 
-    public Legume merge(final Legume legumeToAdd) {
-        return manager.merge(legumeToAdd);
+    public Legume create(final Legume legumeToAdd) {
+        manager.persist(legumeToAdd);
+        return legumeToAdd;
     }
 }
