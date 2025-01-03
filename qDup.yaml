@@ -244,6 +244,14 @@ scripts:
     - sh: report -y -d=${{WORKDIR}}/hyperfoil/report/${{CURRENT_IMPLEMENTATION}}-hyperfoil.html
     - sh: exit # leave the Hyperfoil CLI session
 
+    # Collect results into state 
+    - read-state: CURRENT_IMPLEMENTATION
+      then:
+      - js: (input, state) => { state.BENCHMARK_IMPLEMENTATION.push(input) }  
+    - sh: cat ${{WORKDIR}}/hyperfoil/report/${{CURRENT_IMPLEMENTATION}}-hyperfoil.json
+      then:
+      - js: (input, state) => { state.HYPERFOIL_RESULT.push(input) }
+
   # Profiling -----------------------------------------------------------------------------------------------------------------
 
   setup-profiling:
@@ -431,3 +439,7 @@ states:
 
   # Other options
   SERVER_OPTS:
+
+  # Results
+  BENCHMARK_IMPLEMENTATION: []
+  HYPERFOIL_RESULT: []    
