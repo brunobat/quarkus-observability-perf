@@ -278,6 +278,7 @@ scripts:
       then:
       - js: (input, state) => { state.BENCHMARK_IMPLEMENTATION.push(input) }  
     - sh: cat ${{WORKDIR}}/hyperfoil/report/${{CURRENT_IMPLEMENTATION}}-hyperfoil.json
+      silent: true
       then:
       - js: (input, state) => { state.HYPERFOIL_RESULT.push(input) }
 
