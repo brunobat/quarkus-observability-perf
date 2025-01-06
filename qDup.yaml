@@ -16,7 +16,10 @@ scripts:
             - script: build-observability-remote
 
   build-observability-local:
-    - upload: ${{ENV.SCRIPT_DIR}}/quarkus-otel-db-perf/target/quarkus-app ${{WORKDIR}}/observability-perf/benchmark/
+    # for this to work correctly would require to build the application with two maven profiles 
+    - log: "WARNING: UPLOADING THE SAME BUILD FOR DIFFERENT TESTS!!"
+    - upload: ${{ENV.SCRIPT_DIR}}/quarkus-otel-db-perf/target/quarkus-app ${{WORKDIR}}/observability-perf/quarkus-extension-benchmark/ 
+    - upload: ${{ENV.SCRIPT_DIR}}/quarkus-otel-db-perf/target/quarkus-app ${{WORKDIR}}/observability-perf/quarkus-benchmark/
 
   build-observability-remote:
     - script: sdk-install-maven
@@ -28,16 +31,29 @@ scripts:
         - script: build-custom-quarkus
         - sh: cd ${{WORKDIR}}/observability-perf-src
         - sh: mvn -B -q versions:set-property -Dproperty=quarkus.platform.version -DnewVersion=${{QUARKUS_VERSION}} -Dmaven.repo.local=${{WORKDIR}}/observability-perf-src/m2-repo
-    - queue-download: observability-perf-maven.txt
     - log: Building observability perf benchmark from source ${{OBSERVABILITY_REPO_URL}} @ ${{OBSERVABILITY_REPO_COMMIT:main}}
-    - sh: mvn -B package -DskipTests -Dmaven.repo.local=${{WORKDIR}}/observability-perf-src/m2-repo | tee observability-perf-maven.txt | grep -e "BUILD SUCCESS"
+
+    - queue-download: observability-perf-maven.txt
+    - sh: mvn -B -ntp clean package -DskipTests -Dquarkus.otel.enabled=false -Dmaven.repo.local=${{WORKDIR}}/observability-perf-src/m2-repo | tee observability-perf-maven.txt | grep -e "BUILD SUCCESS"
       idle-timer: 5m
       then:
         - regex: BUILD SUCCESS
           else:
-            - abort: Failed to build observability Benchmark
+            - abort: Failed to build observability benchmark
+    - sh: cp -r quarkus-otel-db-perf/target/quarkus-app ${{WORKDIR}}/observability-perf/quarkus-benchmark/
+      then:
+        - regex: No such file or directory
+          then:
+            - abort: Failed to copy observability benchmark
 
-    - sh: cp -r quarkus-otel-db-perf/target/quarkus-app ${{WORKDIR}}/observability-perf/benchmark/
+    - queue-download: observability-perf-extension-maven.txt
+    - sh: mvn -B -ntp clean package -DskipTests -Dquarkus.otel.enabled=true -Dmaven.repo.local=${{WORKDIR}}/observability-perf-src/m2-repo | tee observability-perf-extension-maven.txt | grep -e "BUILD SUCCESS"
+      idle-timer: 5m
+      then:
+        - regex: BUILD SUCCESS
+          else:
+            - abort: Failed to build observability benchmark
+    - sh: cp -r quarkus-otel-db-perf/target/quarkus-app ${{WORKDIR}}/observability-perf/quarkus-extension-benchmark/
       then:
         - regex: No such file or directory
           then:
@@ -48,7 +64,7 @@ scripts:
     - sh: cd ${{WORKDIR}}/observability-perf-src/custom-quarkus
     - queue-download: quarkus-maven.txt
     - log: Building quarkus from source ${{QUARKUS_REPO_URL}} @ ${{QUARKUS_REPO_COMMIT}}
-    - sh: MAVEN_OPTS="-Xmx8g" ./mvnw -Dquickly -Dmaven.repo.local=${{WORKDIR}}/observability-perf-src/m2-repo | tee quarkus-maven.txt | grep -e "BUILD SUCCESS"
+    - sh: MAVEN_OPTS="-Xmx8g" ./mvnw -ntp -Dquickly -Dmaven.repo.local=${{WORKDIR}}/observability-perf-src/m2-repo | tee quarkus-maven.txt | grep -e "BUILD SUCCESS"
       idle-timer: 10m
       then:
         - regex: BUILD SUCCESS
@@ -186,16 +202,21 @@ scripts:
 
   run-observability-perf:
     - script: sdk-select-jdk
+    - set-state: RUN.CURRENT_BULD quarkus-extension
     - set-state: RUN.CURRENT_IMPLEMENTATION observability-off
     - sleep: 15s # allow for monitoring and profiling to startup
     - script: run-benchmark-server
     - set-state: RUN.CURRENT_IMPLEMENTATION observability-on
     - sleep: 15s # allow for monitoring and profiling to restart
     - script: run-benchmark-server
+    - set-state: RUN.CURRENT_BULD quarkus
+    - set-state: RUN.CURRENT_IMPLEMENTATION observability-disabled
+    - sleep: 15s # allow for monitoring and profiling to restart
+    - script: run-benchmark-server
     - signal: BENCHMARK_DONE
 
   run-benchmark-server:
-    - sh: cd ${{WORKDIR}}/observability-perf/benchmark
+    - sh: cd ${{WORKDIR}}/observability-perf/${{CURRENT_BULD}}-benchmark
     - set-signal: HYPERFOIL_DONE 1
     - sh: export JAVA_OPTS=""
     - read-state: ${{CURRENT_IMPLEMENTATION}}
@@ -245,7 +266,7 @@ scripts:
     - sh: exit # leave the Hyperfoil CLI session
 
     # Collect results into state 
-    - read-state: CURRENT_IMPLEMENTATION
+    - read-state: ${{CURRENT_IMPLEMENTATION}}
       then:
       - js: (input, state) => { state.BENCHMARK_IMPLEMENTATION.push(input) }  
     - sh: cat ${{WORKDIR}}/hyperfoil/report/${{CURRENT_IMPLEMENTATION}}-hyperfoil.json
