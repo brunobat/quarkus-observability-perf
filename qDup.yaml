@@ -197,7 +197,6 @@ scripts:
         - sh: ${{CONTAINER_ENGINE}} container stop observability-perf-jaeger
         - sh: ${{CONTAINER_ENGINE}} container rm observability-perf-jaeger
 
-
   # Benchmark run --------------------------------------------------------------------------------------------------------------
 
   run-observability-perf:
@@ -213,6 +212,10 @@ scripts:
     - set-state: RUN.CURRENT_IMPLEMENTATION observability-disabled
     - sleep: 15s # allow for monitoring and profiling to restart
     - script: run-benchmark-server
+    - set-state: RUN.CURRENT_BULD quarkus
+    - set-state: RUN.CURRENT_IMPLEMENTATION observability-agent
+    - sleep: 15s # allow for monitoring and profiling to restart
+    - script: run-benchmark-server
     - signal: BENCHMARK_DONE
 
   run-benchmark-server:
@@ -224,6 +227,11 @@ scripts:
         - regex: observability-off
           then:
             - sh: JAVA_OPTS="$JAVA_OPTS -Dquarkus.otel.sdk.disabled=true"
+            - sh: wget -O opentelemetry-javaagent.jar https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/${{OPENTELEMETRY_AGENT_VERSION:v2.11.0}}/opentelemetry-javaagent.jar
+        - regex: observability-agent
+          then:
+            - sh: export JAVA_OPTS=$JAVA_OPTS -javaagent:opentelemetry-javaagent.jar
+
     - read-state: ${{SERVER_MEMORY}}
       then:
         - sh: JAVA_OPTS="$JAVA_OPTS -Xms${{SERVER_MEMORY}} -Xmx${{SERVER_MEMORY}}"
@@ -431,6 +439,7 @@ states:
   HYPERFOIL_VERSION: 0.24
   POSTGRES_VERSION:
   JAEGER_VERSION:
+  OPENTELEMETRY_AGENT_VERSION:
 
   # [local / remote] either upload the artifacts built locally or build remotely 
   BUILD_TYPE: remote
