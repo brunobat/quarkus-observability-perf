@@ -280,7 +280,11 @@ scripts:
     - sh: cat ${{WORKDIR}}/hyperfoil/report/${{CURRENT_IMPLEMENTATION}}-hyperfoil.json
       silent: true
       then:
-      - js: (input, state) => { state.HYPERFOIL_RESULT.push(input) }
+      - js: |
+          (input, state) => { 
+            let { agents, connections, sessions, ...result_stripped } = input
+            state.HYPERFOIL_RESULT.push(result_stripped)
+          }
 
   # Profiling -----------------------------------------------------------------------------------------------------------------
 
