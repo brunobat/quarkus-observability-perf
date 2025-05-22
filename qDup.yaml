@@ -47,7 +47,7 @@ scripts:
             - abort: Failed to copy observability benchmark
 
     - queue-download: observability-perf-extension-maven.txt
-    - sh: mvn -B -ntp clean package -DskipTests -Dquarkus.otel.enabled=true -Dmaven.repo.local=${{WORKDIR}}/observability-perf-src/m2-repo | tee observability-perf-extension-maven.txt | grep -e "BUILD SUCCESS"
+    - sh: mvn -B -ntp clean package -DskipTests -Dquarkus.otel.enabled=true -Dquarkus.otel.traces.sampler=${{SAMPLER:traceidratio}} -Dmaven.repo.local=${{WORKDIR}}/observability-perf-src/m2-repo | tee observability-perf-extension-maven.txt | grep -e "BUILD SUCCESS"
       idle-timer: 5m
       then:
         - regex: BUILD SUCCESS
@@ -229,7 +229,7 @@ scripts:
             - sh: JAVA_OPTS="$JAVA_OPTS -Dquarkus.otel.sdk.disabled=true"
         - regex: observability-on
           then:
-            - sh: JAVA_OPTS="$JAVA_OPTS -Dquarkus.otel.traces.sampler=${{SAMPLER:traceidratio}} -Dquarkus.otel.traces.sampler.arg=${{SAMPLER_ARG:0.1}}d -Dquarkus.otel.bsp.max.export.batch.size=${{BATCH_SIZE:512}}"
+            - sh: JAVA_OPTS="$JAVA_OPTS -Dquarkus.otel.traces.sampler.arg=${{SAMPLER_ARG:0.1}}d -Dquarkus.otel.bsp.max.export.batch.size=${{BATCH_SIZE:512}}"
         - regex: observability-agent
           then:
             - sh: wget -O opentelemetry-javaagent.jar https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/${{OPENTELEMETRY_AGENT_VERSION:v2.11.0}}/opentelemetry-javaagent.jar
