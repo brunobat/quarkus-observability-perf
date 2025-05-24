@@ -34,7 +34,7 @@ scripts:
     - log: Building observability perf benchmark from source ${{OBSERVABILITY_REPO_URL}} @ ${{OBSERVABILITY_REPO_COMMIT:main}}
 
     - queue-download: observability-perf-maven.txt
-    - sh: mvn -B -ntp clean package -DskipTests -Dquarkus.otel.enabled=false -Dmaven.repo.local=${{WORKDIR}}/observability-perf-src/m2-repo | tee observability-perf-maven.txt | grep -e "BUILD SUCCESS"
+    - sh: mvn -B -ntp clean package -DskipTests -Dquarkus.otel.enabled=false -Dquarkus.micrometer.enabled=false -Dmaven.repo.local=${{WORKDIR}}/observability-perf-src/m2-repo | tee observability-perf-maven.txt | grep -e "BUILD SUCCESS"
       idle-timer: 5m
       then:
         - regex: BUILD SUCCESS
