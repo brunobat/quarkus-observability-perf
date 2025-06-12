@@ -64,7 +64,7 @@ scripts:
     - sh: cd ${{WORKDIR}}/observability-perf-src/custom-quarkus
     - queue-download: quarkus-maven.txt
     - log: Building quarkus from source ${{QUARKUS_REPO_URL}} @ ${{QUARKUS_REPO_COMMIT}}
-    - sh: ./mvnw -B -q -pl 'io.quarkus:quarkus-bom-dev-ui,io.quarkus:quarkus-bom,io.quarkus:quarkus-maven-plugin' -am install -P '!validate,!format' -DskipTests -Dmaven.repo.local=${{WORKDIR}}/observability-perf-src/m2-repo
+    - sh: ./mvnw -B -q -pl 'io.quarkus:quarkus-bom-dev-ui,io.quarkus:quarkus-bom,io.quarkus:quarkus-maven-plugin,io.quarkus:quarkus-gradle-model' -am install -P '!validate,!format' -DskipTests -Dmaven.repo.local=${{WORKDIR}}/observability-perf-src/m2-repo
     - sh: MAVEN_OPTS="-Xmx8g" ./mvnw -ntp -T1C -Dskip.gradle.build=true -Dno-test-modules -Dquickly -Dinvoker.skip -Dtruststore.skip -Dmaven.repo.local=${{WORKDIR}}/observability-perf-src/m2-repo | tee quarkus-maven.txt | grep -e "BUILD SUCCESS"
       idle-timer: 10m
       then:
