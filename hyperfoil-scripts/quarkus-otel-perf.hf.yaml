@@ -1,5 +1,6 @@
 # This is the name of the benchmark. It's recommended to keep this in sync with
 # name of this file, adding extension `.hf.yaml`.
+# Legacy name was kept
 name: quarkus-activemq
 # We must define at least one HTTP target, in this case it becomes a default
 # for all HTTP requests.
@@ -9,10 +10,9 @@ http:
 phases:
   - rampup:
       increasingRate:
-        initialUsersPerSec: 2
-        targetUsersPerSec: 10000
-        # We expect at most 1000 users being active at one moment - see below
-        maxSessions: 10000
+        initialUsersPerSec: 1
+        targetUsersPerSec: 7500
+        maxSessions: 7500
         duration: 5m
         forks:
           createFork:
@@ -71,7 +71,7 @@ phases:
   - mainPhase:
       constantRate:
         # users will be starting the scenario every second
-        usersPerSec: 10000
+        usersPerSec: 7500
         duration: 5m
         startAfter: rampup
         forks:
