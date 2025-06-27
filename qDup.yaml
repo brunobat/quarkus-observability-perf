@@ -466,7 +466,7 @@ states:
   PROFILER_ARGS:
 
   ASYNC_PROFILER_REPO_URL: https://github.com/jvm-profiling-tools/async-profiler
-  ASYNC_PROFILER_REPO_COMMIT: v3.0
+  ASYNC_PROFILER_REPO_COMMIT: v4.0
 
   # CPU and memory restrictions
   SERVER_MEMORY:
