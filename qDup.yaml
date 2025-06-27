@@ -238,7 +238,7 @@ scripts:
 
     - read-state: ${{SERVER_MEMORY}}
       then:
-        - sh: JAVA_OPTS="$JAVA_OPTS -Xms${{SERVER_MEMORY}} -Xmx${{SERVER_MEMORY}}"
+        - sh: JAVA_OPTS="$JAVA_OPTS -Xmx${{SERVER_MEMORY}}"
     - queue-download: quarkus-${{RUN.CURRENT_IMPLEMENTATION}}.txt
     - sh: taskset --cpu-list ${{SERVER_CPUS}} java -XX:+UseNUMA -Dobservability-process $JAVA_OPTS ${{SERVER_OPTS}} -jar quarkus-run.jar | tee quarkus-${{RUN.CURRENT_IMPLEMENTATION}}.txt | grep started
       idle-timer: 5m
