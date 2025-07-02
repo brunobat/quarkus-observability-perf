@@ -11,8 +11,8 @@ phases:
   - rampup:
       increasingRate:
         initialUsersPerSec: 1
-        targetUsersPerSec: 7500
-        maxSessions: 7500
+        targetUsersPerSec: 10000
+        maxSessions: 10000
         duration: 5m
         forks:
           createFork:
@@ -71,7 +71,7 @@ phases:
   - mainPhase:
       constantRate:
         # users will be starting the scenario every second
-        usersPerSec: 7500
+        usersPerSec: 10000
         duration: 5m
         startAfter: rampup
         forks:
