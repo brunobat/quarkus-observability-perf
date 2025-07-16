@@ -111,7 +111,7 @@ public interface LegumeApi {
             @Parameter(name = "id",
                     description = "Id of the Legume to delete",
                     required = true,
-                    example = "81471222-5798-11e9-ae24-57fa13b361e1",
+                    example = "123",
                     schema = @Schema(description = "uuid", required = true))
             @PathParam("id")
             @NotEmpty final Long legumeId);
