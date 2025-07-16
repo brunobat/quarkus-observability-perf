@@ -48,10 +48,10 @@ public class LegumeResource implements LegumeApi {
     }
 
     @Transactional
-    public Response delete(@NotEmpty final String legumeId) {
-        return find(legumeId)
+    public Response delete(@NotEmpty final Long legumeId) {
+        return repository.findByIdOptional(legumeId)
                 .map(legume -> {
-                    repository.remove(legume);
+                    repository.delete(legume);
                     return Response.status(NO_CONTENT).build();
                 })
                 .orElse(Response.status(NOT_FOUND).build());
@@ -62,22 +62,15 @@ public class LegumeResource implements LegumeApi {
         return repository.listLegumes(pageIndex).toList();
     }
 
-    private Optional<LegumeItem> find(final String legumeId) {
-        return repository.find("id", legumeId).stream()
-                .map(this::getLegumeItem)
-                .findFirst();
-    }
-
     public LegumeItem addLegume(final @Valid LegumeNew legumeNew) {
         final Legume legumeToAdd = Legume.builder()
                 .name(legumeNew.getName())
                 .description((legumeNew.getDescription()))
                 .build();
 
-        final Legume addedLegume = repository.create(legumeToAdd);
-        final LegumeItem legumeItem = getLegumeItem(addedLegume);
+        repository.persist(legumeToAdd);
 
-        return legumeItem;
+        return getLegumeItem(legumeToAdd);
     }
 
     private LegumeItem getLegumeItem(final Legume addedLegume) {

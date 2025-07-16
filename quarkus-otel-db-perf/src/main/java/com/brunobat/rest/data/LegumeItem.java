@@ -6,14 +6,14 @@ import jakarta.validation.constraints.NotBlank;
 
 @RegisterForReflection
 public class LegumeItem {
-    private String id;
+    private Long id;
 
     @NotBlank
     private String name;
 
     private String description;
 
-    public LegumeItem(String id, @NotBlank String name, String description) {
+    public LegumeItem(Long id, @NotBlank String name, String description) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -32,7 +32,7 @@ public class LegumeItem {
         return new LegumeItemBuilder();
     }
 
-    public String getId() {
+    public Long getId() {
         return this.id;
     }
 
@@ -44,7 +44,7 @@ public class LegumeItem {
         return this.description;
     }
 
-    public void setId(String id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -84,14 +84,14 @@ public class LegumeItem {
     }
 
     public static class LegumeItemBuilder {
-        private String id;
+        private Long id;
         private @NotBlank String name;
         private String description;
 
         LegumeItemBuilder() {
         }
 
-        public LegumeItemBuilder id(String id) {
+        public LegumeItemBuilder id(Long id) {
             this.id = id;
             return this;
         }

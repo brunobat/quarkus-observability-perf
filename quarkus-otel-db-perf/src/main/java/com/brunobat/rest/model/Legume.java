@@ -1,18 +1,20 @@
 package com.brunobat.rest.model;
 
+import jakarta.persistence.Cacheable;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
-import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Immutable;
 
 @Entity
+@Immutable
+@Cacheable
 public class Legume {
 
     @Id
-    @GeneratedValue(generator = "system-uuid")
-    @GenericGenerator(name = "system-uuid", strategy = "uuid")
-    private String id;
+    @GeneratedValue
+    private Long id;
 
     @Column(nullable = false)
     private String name;
@@ -20,7 +22,7 @@ public class Legume {
     @Column(length = 2000)
     private String description;
 
-    public Legume(String id, String name, String description) {
+    public Legume(Long id, String name, String description) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -33,7 +35,7 @@ public class Legume {
         return new LegumeBuilder();
     }
 
-    public String getId() {
+    public Long getId() {
         return this.id;
     }
 
@@ -45,7 +47,7 @@ public class Legume {
         return this.description;
     }
 
-    public void setId(String id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -61,38 +63,15 @@ public class Legume {
         return "Legume(id=" + this.getId() + ", name=" + this.getName() + ", description=" + this.getDescription() + ")";
     }
 
-    public boolean equals(final Object o) {
-        if (o == this) return true;
-        if (!(o instanceof Legume)) return false;
-        final Legume other = (Legume) o;
-        if (!other.canEqual((Object) this)) return false;
-        final Object this$id = this.getId();
-        final Object other$id = other.getId();
-        if (this$id == null ? other$id != null : !this$id.equals(other$id)) return false;
-        return true;
-    }
-
-    protected boolean canEqual(final Object other) {
-        return other instanceof Legume;
-    }
-
-    public int hashCode() {
-        final int PRIME = 59;
-        int result = 1;
-        final Object $id = this.getId();
-        result = result * PRIME + ($id == null ? 43 : $id.hashCode());
-        return result;
-    }
-
     public static class LegumeBuilder {
-        private String id;
+        private Long id;
         private String name;
         private String description;
 
         LegumeBuilder() {
         }
 
-        public LegumeBuilder id(String id) {
+        public LegumeBuilder id(Long id) {
             this.id = id;
             return this;
         }
