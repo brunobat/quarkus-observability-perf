@@ -114,7 +114,7 @@ public interface LegumeApi {
                     example = "81471222-5798-11e9-ae24-57fa13b361e1",
                     schema = @Schema(description = "uuid", required = true))
             @PathParam("id")
-            @NotEmpty final String legumeId);
+            @NotEmpty final Long legumeId);
 
     @Operation(
             operationId = "ListLegumes",

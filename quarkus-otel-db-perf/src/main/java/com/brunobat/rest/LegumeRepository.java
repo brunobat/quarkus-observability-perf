@@ -17,16 +17,9 @@ public class LegumeRepository implements PanacheRepository<Legume> {
 
     public Stream<LegumeItem> listLegumes(int pageIndex) {
         return find("SELECT h FROM Legume h")
+                .withHint("org.hibernate.cacheable", "true")
                 .project(LegumeItem.class)
                 .page(pageIndex, 16).stream();
     }
 
-    public void remove(final LegumeItem legume) {
-        manager.remove(legume);
-    }
-
-    public Legume create(final Legume legumeToAdd) {
-        manager.persist(legumeToAdd);
-        return legumeToAdd;
-    }
 }
