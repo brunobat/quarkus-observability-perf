@@ -9,7 +9,6 @@ import org.hibernate.annotations.Immutable;
 
 @Entity
 @Immutable
-@Cacheable
 public class Legume {
 
     @Id
