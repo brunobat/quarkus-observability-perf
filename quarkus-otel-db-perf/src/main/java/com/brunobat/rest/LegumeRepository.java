@@ -16,7 +16,7 @@ public class LegumeRepository implements PanacheRepository<Legume> {
     EntityManager manager;
 
     public Stream<LegumeItem> listLegumes(int pageIndex) {
-        return find("SELECT h FROM Legume h")
+        return find("FROM Legume h")
 //                .withHint("org.hibernate.cacheable", "true")
                 .project(LegumeItem.class)
                 .page(pageIndex, 16).stream();
