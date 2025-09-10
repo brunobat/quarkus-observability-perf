@@ -5,6 +5,7 @@ import com.brunobat.rest.LegumeRepository;
 import com.brunobat.rest.data.LegumeItem;
 import com.brunobat.rest.data.LegumeNew;
 import com.brunobat.rest.model.Legume;
+import jakarta.data.page.PageRequest;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -49,7 +50,8 @@ public class LegumeResource implements LegumeApi {
 
     @Transactional
     public Response delete(@NotEmpty final Long legumeId) {
-        return repository.findByIdOptional(legumeId)
+		// Could be simply deleteById if we don't care about returning NOT FOUND.
+        return repository.findById(legumeId)
                 .map(legume -> {
                     repository.delete(legume);
                     return Response.status(NO_CONTENT).build();
@@ -59,7 +61,7 @@ public class LegumeResource implements LegumeApi {
 
     public List<LegumeItem> list(int pageIndex) {
 //        log.info("someone asked for a list for index: " + pageIndex);
-        return repository.listLegumes(pageIndex).toList();
+        return repository.listLegumes(PageRequest.ofPage(pageIndex + 1, 16, false)).toList();
     }
 
     public LegumeItem addLegume(final @Valid LegumeNew legumeNew) {
@@ -68,7 +70,7 @@ public class LegumeResource implements LegumeApi {
                 .description((legumeNew.getDescription()))
                 .build();
 
-        repository.persist(legumeToAdd);
+        repository.insert(legumeToAdd);
 
         return getLegumeItem(legumeToAdd);
     }
