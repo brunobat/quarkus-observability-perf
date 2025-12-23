@@ -1,0 +1,112 @@
+{
+  "experiment_name": "quarkus_otel_response_time_hpo",
+  "experiment_id": "q001",
+  "total_trials": 5,
+  "parallel_trials":1,
+  "objective_function": "percentileResponseTime.50.0*percentileResponseTime.99.9*maxResponseTime",
+  "value_type": "double",
+  "hpo_algo_impl": "optuna_tpe",
+  "direction": "minimize",
+  "function_variables": [
+    {
+      "name": "percentileResponseTime.50.0", // Can I reference this?
+      "value_type": "double"
+    },
+    {
+      "name": "percentileResponseTime.99.9",
+      "value_type": "double"
+    },
+    {
+      "name": "maxResponseTime",
+      "value_type": "double"
+    }
+  ],
+  "tunables": [
+    {
+      "name": "server_memory",
+      "value_type": "integer",
+      "upper_bound": 2048,
+      "lower_bound": 256,
+      "step": 178 // 10 steps
+    },
+    {
+      "name": "batch_size",
+      "value_type": "integer",
+      "upper_bound": 1024,
+      "lower_bound": 128,
+      "step": 89 // 10 steps
+    },
+    {
+      "name": "sampler_arg",
+      "value_type": "double",
+      "upper_bound": 0.5,
+      "lower_bound": 0.01,
+      "step": 0.049 // 10 steps
+    },
+//    {
+//      "name": "quarkus.thread-pool.core-threads",
+//      "value_type": "integer",
+//      "upper_bound": 32,
+//      "lower_bound": 1,
+//      "step": 1
+//    },
+    {
+      "name": "quarkus.thread-pool.queue-size",
+      "value_type": "integer",
+      "upper_bound": 10001,
+      "lower_bound": 1,
+      "step": 10
+    },
+    {
+      "name": "quarkus.datasource.jdbc.min-size",
+      "value_type": "integer",
+      "upper_bound": 12,
+      "lower_bound": 1,
+      "step": 1
+    },
+    {
+      "name": "quarkus.datasource.jdbc.max-size",
+      "value_type": "integer",
+      "upper_bound": 90,
+      "lower_bound": 12,
+      "step": 1
+    },
+    {
+      "name": "quarkus.hibernate-orm.jdbc.statement-fetch-size",
+      "value_type": "integer",
+      "upper_bound": 50,
+      "lower_bound": 1,
+      "step": 1
+    },
+    {
+      "name": "quarkus.http.io-threads",
+      "value_type": "categorical",
+      "choices": ["true","false"]
+    },
+    {
+      "name": "gc",
+      "value_type": "categorical",
+      "choices": ["G1GC","ParallelGC","SerialGC","ShenandoahGC","ZGC"]
+    },
+    {
+      "name": "LockMinHeap",
+      "value_type": "categorical",
+      "choices": ["true", "false"]
+    },
+    {
+      "name": "LockMaxHeap",
+      "value_type": "categorical",
+      "choices": ["true", "false"]
+    },
+    {
+      "name": "AlwaysPreTouch",
+      "value_type": "categorical",
+      "choices": ["true", "false"]
+    },
+    {
+      "name": "StackTraceInThrowable",
+      "value_type": "categorical",
+      "choices": ["true", "false"]
+    }
+  ]
+}
