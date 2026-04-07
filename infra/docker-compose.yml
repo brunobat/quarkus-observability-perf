@@ -3,7 +3,7 @@ services:
     networks:
       backend:
         aliases: [ spm_metrics_source ]
-    image: cr.jaegertracing.io/jaegertracing/jaeger:${JAEGER_VERSION:-latest} # Jaeger v2
+    image: cr.jaegertracing.io/jaegertracing/jaeger:${JAEGER_VERSION:-2.17.0} # Jaeger v2
     volumes:
       - "./jaeger-ui.json:/etc/jaeger/jaeger-ui.json"
       - "./config.yml:/etc/jaeger/config.yml"
@@ -26,7 +26,7 @@ services:
       - "9090:9090"
 
   database:
-    image: postgres:latest
+    image: postgres:18.3-alpine
     environment:
       POSTGRES_PASSWORD: changeit
       POSTGRES_USER: pguser

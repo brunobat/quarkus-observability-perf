@@ -1,3 +1,6 @@
 .idea/
 quarkus-otel-db-perf/target/
 quarkus-otel-quickstart-perf/target/
+/CLAUDE.md
+.claude/
+.gitignore
