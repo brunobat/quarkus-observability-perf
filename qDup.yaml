@@ -159,11 +159,11 @@ scripts:
   start-database:
     - sh:
         ${{CONTAINER_ENGINE}} run --detach --cpuset-cpus ${{DATABASE_CPUS}} --network host --name observability-perf-postgres
-        --env POSTGRESQL_DATABASE=test
-        --env POSTGRESQL_USER=pguser
-        --env POSTGRESQL_PASSWORD=changeit
+        --env POSTGRES_DB=test
+        --env POSTGRES_USER=pguser
+        --env POSTGRES_PASSWORD=changeit
         --env PGPORT=5432
-        quay.io/centos7/postgresql-${{POSTGRES_VERSION:13}}-centos7:latest
+        postgres:${{POSTGRES_VERSION:18}}
 
   stop-database:
     - sh:
