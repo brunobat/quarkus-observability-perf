@@ -105,16 +105,16 @@ scripts:
 
   sdk-select-jdk:
     - sh:
-        command: sdk install java ${{JAVA_VERSION:21.0.10-tem}}
+        command: sdk install java ${{JAVA_VERSION:21.0.3-tem}}
         prompt:
           "set as default? (Y/n): ": Y
-    - sh: sdk use java ${{JAVA_VERSION:21.0.10-tem}}
+    - sh: sdk use java ${{JAVA_VERSION:21.0.3-tem}}
     - sh: java -version
 
   sdk-install-maven:
     - sh: which mvn
     - sh:
-        command: sdk install maven ${{MAVEN_VERSION:3.9.12}}
+        command: sdk install maven ${{MAVEN_VERSION:3.8.7}}
         prompt:
           "set as default? (Y/n): ": Y
     - sh: mvn -version
@@ -177,22 +177,14 @@ scripts:
   # Jaeger setup
 
   start-jaeger:
-    - sh: mkdir -p ${{WORKDIR}}/jaeger
-    - read-state: ${{BUILD_TYPE}}
-      then:
-        - regex: local
-          then:
-            - upload: ${{ENV.SCRIPT_DIR}}/infra/config.yml ${{WORKDIR}}/jaeger/config.yml
-        - regex: remote
-          then:
-            - sh: wget -q -nc -O ${{WORKDIR}}/jaeger/config.yml ${{OBSERVABILITY_REPO_URL}}/raw/${{OBSERVABILITY_REPO_COMMIT:main}}/infra/config.yml
     - sh:
         ${{CONTAINER_ENGINE}} run --detach --cpuset-cpus ${{JAEGER_CPUS}} --memory 32g --network host --name observability-perf-jaeger
-        --volume ${{WORKDIR}}/jaeger/config.yml:/etc/jaeger/config.yml
-        --env OTEL_ENABLED=true
+        --env COLLECTOR_OTLP_ENABLED=true
+        --env COLLECTOR_QUEUE_SIZE=1000
+        --env SPAN_STORAGE_TYPE=memory
+        --env DOWNSAMPLING_RATIO=0.1
         --env GODEBUG=gctrace=1
-        cr.jaegertracing.io/jaegertracing/jaeger:${{JAEGER_VERSION:2.17.0}}
-        --config /etc/jaeger/config.yml
+        jaegertracing/all-in-one:${{JAEGER_VERSION:1.49.0}}
 
   stop-jaeger:
     - sh:
@@ -240,7 +232,7 @@ scripts:
             - sh: JAVA_OPTS="$JAVA_OPTS -Dquarkus.otel.traces.sampler.arg=${{SAMPLER_ARG:0.1}}d -Dquarkus.otel.bsp.max.export.batch.size=${{BATCH_SIZE:512}}"
         - regex: observability-agent
           then:
-            - sh: wget -O opentelemetry-javaagent.jar https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/${{OPENTELEMETRY_AGENT_VERSION:v2.25.0}}/opentelemetry-javaagent.jar
+            - sh: wget -O opentelemetry-javaagent.jar https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/${{OPENTELEMETRY_AGENT_VERSION:v2.23.0}}/opentelemetry-javaagent.jar
             - sh: JAVA_OPTS="$JAVA_OPTS -Dotel.traces.sampler=${{SAMPLER:traceidratio}} -Dotel.traces.sampler.arg=${{SAMPLER_ARG:0.1}} -Dotel.bsp.max.export.batch.size=${{BATCH_SIZE:512}} -Dotel.metrics.exporter=none"
             - sh: JAVA_OPTS="$JAVA_OPTS -javaagent:opentelemetry-javaagent.jar"
 
@@ -454,7 +446,7 @@ states:
   CONTAINER_ENGINE: docker
 
   # Versions (leave empty for latest)
-  HYPERFOIL_VERSION: 0.28
+  HYPERFOIL_VERSION: 0.24
   POSTGRES_VERSION:
   JAEGER_VERSION:
   OPENTELEMETRY_AGENT_VERSION:
@@ -475,7 +467,7 @@ states:
   PROFILER_ARGS:
 
   ASYNC_PROFILER_REPO_URL: https://github.com/jvm-profiling-tools/async-profiler
-  ASYNC_PROFILER_REPO_COMMIT: v4.3
+  ASYNC_PROFILER_REPO_COMMIT: v4.0
 
   # CPU and memory restrictions
   SERVER_MEMORY:
