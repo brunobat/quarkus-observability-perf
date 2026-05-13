@@ -205,26 +205,111 @@ scripts:
         - sh: ${{CONTAINER_ENGINE}} container stop observability-perf-jaeger
         - sh: ${{CONTAINER_ENGINE}} container rm observability-perf-jaeger
 
-  # Benchmark run --------------------------------------------------------------------------------------------------------------
+# Benchmark run --------------------------------------------------------------------------------------------------------------
 
+# perf_scenarios_param: START - Added PERF_SCENARIOS parameter support for flexible scenario selection
+# Purpose: Allow users to specify which benchmark scenarios to run via PERF_SCENARIOS parameter
+# Usage: PERF_SCENARIOS=observability-off,observability-on,observability-disabled,observability-agent
+# Default: All 4 scenarios if not specified
+ 
   run-observability-perf:
     - script: sdk-select-jdk
-    - set-state: RUN.CURRENT_BULD quarkus-extension
-    - set-state: RUN.CURRENT_IMPLEMENTATION observability-off
-    - sleep: 15s # allow for monitoring and profiling to startup
-    - script: run-benchmark-server
-    - set-state: RUN.CURRENT_IMPLEMENTATION observability-on
-    - sleep: 15s # allow for monitoring and profiling to restart
-    - script: run-benchmark-server
-    - set-state: RUN.CURRENT_BULD quarkus
-    - set-state: RUN.CURRENT_IMPLEMENTATION observability-disabled
-    - sleep: 15s # allow for monitoring and profiling to restart
-    - script: run-benchmark-server
-    - set-state: RUN.CURRENT_BULD quarkus
-    - set-state: RUN.CURRENT_IMPLEMENTATION observability-agent
-    - sleep: 15s # allow for monitoring and profiling to restart
-    - script: run-benchmark-server
+
+    # perf_scenarios_param: Log the input parameter for debugging
+    - log: "PERF_SCENARIOS=${{PERF_SCENARIOS}}"
+
+    # perf_scenarios_param: Handle empty input by setting default scenarios
+    - read-state: ${{PERF_SCENARIOS}}
+      then:
+        - regex: ^$
+          then:
+            - log: "PERF_SCENARIOS empty → using default scenarios"
+            - set-state: PERF_SCENARIOS observability-off,observability-on,observability-disabled,observability-agent
+
+    # perf_scenarios_param: Validate input to ensure only valid scenario names are provided
+    - read-state: ${{PERF_SCENARIOS}}
+      then:
+        - regex: ^(observability-(off|on|disabled|agent))(, *observability-(off|on|disabled|agent))*$
+          else:
+            - abort: 'Invalid PERF_SCENARIOS value. Allowed values: observability-off, observability-on, observability-disabled, observability-agent'
+
+    # perf_scenarios_param: Initialize state variables for scenario queue management
+    - set-state: SCENARIO_QUEUE []
+    - set-state: SCENARIOS_DONE false
+    - set-state: CURRENT_SCENARIO ""
+
+    # perf_scenarios_param: Convert comma-separated string to array queue
+    - read-state: ${{PERF_SCENARIOS}}
+      then:
+        - js: |
+            (input, state) => {
+              state.SCENARIO_QUEUE = input.split(",").map(s => s.trim());
+            }
+
+    # perf_scenarios_param: Main execution loop - processes scenarios in order from queue
+    # Fixed to use signal instead of state for repeat-until to properly exit loop
+    - repeat-until: SCENARIOS_DONE
+      then:
+
+        # perf_scenarios_param: Pop next scenario from queue
+        - read-state: ${{SCENARIO_QUEUE}}
+          then:
+            - js: |
+                (input, state) => {
+                  if (!input || input.length === 0) {
+                    state.SCENARIOS_DONE = true;
+                  } else {
+                    state.CURRENT_SCENARIO = input.shift();
+                    state.SCENARIO_QUEUE = input;
+                  }
+                }
+
+        # perf_scenarios_param: Check if queue is empty and signal loop completion
+        - read-state: ${{SCENARIOS_DONE}}
+          then:
+            - regex: ^true$
+              then:
+                - log: "No more scenarios. Loop ending"
+                - signal: SCENARIOS_DONE
+              else:
+                # perf_scenarios_param: Log current scenario being executed
+                - read-state: ${{CURRENT_SCENARIO}}
+                  then:
+                    - regex: ^.+$
+                      then:
+                        - log: "Running scenario: ${{CURRENT_SCENARIO}}"
+
+                # perf_scenarios_param: Map scenario name to build type and implementation
+                - read-state: ${{CURRENT_SCENARIO}}
+                  then:
+                    - regex: ^observability-off$
+                      then:
+                        - set-state: RUN.CURRENT_BULD quarkus-extension
+                        - set-state: RUN.CURRENT_IMPLEMENTATION observability-off
+
+                    - regex: ^observability-on$
+                      then:
+                        - set-state: RUN.CURRENT_BULD quarkus-extension
+                        - set-state: RUN.CURRENT_IMPLEMENTATION observability-on
+
+                    - regex: ^observability-disabled$
+                      then:
+                        - set-state: RUN.CURRENT_BULD quarkus
+                        - set-state: RUN.CURRENT_IMPLEMENTATION observability-disabled
+
+                    - regex: ^observability-agent$
+                      then:
+                        - set-state: RUN.CURRENT_BULD quarkus
+                        - set-state: RUN.CURRENT_IMPLEMENTATION observability-agent
+
+                # Execute benchmark
+                - sleep: 15s
+                - script: run-benchmark-server
+
+    # Completion signal
     - signal: BENCHMARK_DONE
+
+# perf_scenarios_param: END
 
   run-benchmark-server:
     - sh: cd ${{WORKDIR}}/observability-perf/${{CURRENT_BULD}}-benchmark
@@ -487,6 +572,9 @@ states:
 
   # Other options
   SERVER_OPTS:
+
+  # Benchmark control
+  PERF_SCENARIOS: observability-off,observability-on,observability-disabled,observability-agent
 
   # Results
   BENCHMARK_IMPLEMENTATION: []
