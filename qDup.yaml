@@ -313,6 +313,14 @@ scripts:
 
   run-benchmark-server:
     - sh: cd ${{WORKDIR}}/observability-perf/${{CURRENT_BULD}}-benchmark
+    # Kill any leftover observability-process Java processes from previous runs before starting a new one
+    - sh: |
+        STALE_PIDS=$(ps --format pid,cmd x | grep 'observability-process' | grep java | grep -v grep | awk '{print $1}')
+        if [ -n "$STALE_PIDS" ]; then
+          echo "Killing stale observability-process PIDs: $STALE_PIDS"
+          kill -9 $STALE_PIDS
+          sleep 2
+        fi
     - set-signal: HYPERFOIL_DONE 1
     - sh: export JAVA_OPTS=""
     - read-state: ${{CURRENT_IMPLEMENTATION}}
