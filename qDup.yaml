@@ -105,16 +105,16 @@ scripts:
 
   sdk-select-jdk:
     - sh:
-        command: sdk install java ${{JAVA_VERSION:21.0.3-tem}}
+        command: sdk install java ${{JAVA_VERSION:21.0.10-tem}}
         prompt:
           "set as default? (Y/n): ": Y
-    - sh: sdk use java ${{JAVA_VERSION:21.0.3-tem}}
+    - sh: sdk use java ${{JAVA_VERSION:21.0.10-tem}}
     - sh: java -version
 
   sdk-install-maven:
     - sh: which mvn
     - sh:
-        command: sdk install maven ${{MAVEN_VERSION:3.8.7}}
+        command: sdk install maven ${{MAVEN_VERSION:3.9.12}}
         prompt:
           "set as default? (Y/n): ": Y
     - sh: mvn -version
@@ -159,11 +159,11 @@ scripts:
   start-database:
     - sh:
         ${{CONTAINER_ENGINE}} run --detach --cpuset-cpus ${{DATABASE_CPUS}} --network host --name observability-perf-postgres
-        --env POSTGRESQL_DATABASE=test
-        --env POSTGRESQL_USER=pguser
-        --env POSTGRESQL_PASSWORD=changeit
+        --env POSTGRES_DB=test
+        --env POSTGRES_USER=pguser
+        --env POSTGRES_PASSWORD=changeit
         --env PGPORT=5432
-        quay.io/centos7/postgresql-${{POSTGRES_VERSION:13}}-centos7:latest
+        postgres:${{POSTGRES_VERSION:18}}
 
   stop-database:
     - sh:
@@ -177,14 +177,22 @@ scripts:
   # Jaeger setup
 
   start-jaeger:
+    - sh: mkdir -p ${{WORKDIR}}/jaeger
+    - read-state: ${{BUILD_TYPE}}
+      then:
+        - regex: local
+          then:
+            - upload: ${{ENV.SCRIPT_DIR}}/infra/config.yml ${{WORKDIR}}/jaeger/config.yml
+        - regex: remote
+          then:
+            - sh: wget -q -O ${{WORKDIR}}/jaeger/config.yml ${{OBSERVABILITY_REPO_URL}}/raw/${{OBSERVABILITY_REPO_COMMIT:main}}/infra/config.yml
     - sh:
         ${{CONTAINER_ENGINE}} run --detach --cpuset-cpus ${{JAEGER_CPUS}} --memory 32g --network host --name observability-perf-jaeger
-        --env COLLECTOR_OTLP_ENABLED=true
-        --env COLLECTOR_QUEUE_SIZE=1000
-        --env SPAN_STORAGE_TYPE=memory
-        --env DOWNSAMPLING_RATIO=0.1
+        --volume ${{WORKDIR}}/jaeger/config.yml:/etc/jaeger/config.yml
+        --env OTEL_ENABLED=true
         --env GODEBUG=gctrace=1
-        jaegertracing/all-in-one:${{JAEGER_VERSION:1.49.0}}
+        cr.jaegertracing.io/jaegertracing/jaeger:${{JAEGER_VERSION:2.17.0}}
+        --config /etc/jaeger/config.yml
 
   stop-jaeger:
     - sh:
@@ -197,29 +205,122 @@ scripts:
         - sh: ${{CONTAINER_ENGINE}} container stop observability-perf-jaeger
         - sh: ${{CONTAINER_ENGINE}} container rm observability-perf-jaeger
 
-  # Benchmark run --------------------------------------------------------------------------------------------------------------
+# Benchmark run --------------------------------------------------------------------------------------------------------------
 
+# perf_scenarios_param: START - Added PERF_SCENARIOS parameter support for flexible scenario selection
+# Purpose: Allow users to specify which benchmark scenarios to run via PERF_SCENARIOS parameter
+# Usage: PERF_SCENARIOS=observability-off,observability-on,observability-disabled,observability-agent
+# Default: All 4 scenarios if not specified
+ 
   run-observability-perf:
     - script: sdk-select-jdk
-    - set-state: RUN.CURRENT_BULD quarkus-extension
-    - set-state: RUN.CURRENT_IMPLEMENTATION observability-off
-    - sleep: 15s # allow for monitoring and profiling to startup
-    - script: run-benchmark-server
-    - set-state: RUN.CURRENT_IMPLEMENTATION observability-on
-    - sleep: 15s # allow for monitoring and profiling to restart
-    - script: run-benchmark-server
-    - set-state: RUN.CURRENT_BULD quarkus
-    - set-state: RUN.CURRENT_IMPLEMENTATION observability-disabled
-    - sleep: 15s # allow for monitoring and profiling to restart
-    - script: run-benchmark-server
-    - set-state: RUN.CURRENT_BULD quarkus
-    - set-state: RUN.CURRENT_IMPLEMENTATION observability-agent
-    - sleep: 15s # allow for monitoring and profiling to restart
-    - script: run-benchmark-server
+
+    # perf_scenarios_param: Log the input parameter for debugging
+    - log: "PERF_SCENARIOS=${{PERF_SCENARIOS}}"
+
+    # perf_scenarios_param: Handle empty input by setting default scenarios
+    - read-state: ${{PERF_SCENARIOS}}
+      then:
+        - regex: ^$
+          then:
+            - log: "PERF_SCENARIOS empty → using default scenarios"
+            - set-state: PERF_SCENARIOS observability-off,observability-on,observability-disabled,observability-agent
+
+    # perf_scenarios_param: Validate input to ensure only valid scenario names are provided
+    - read-state: ${{PERF_SCENARIOS}}
+      then:
+        - regex: ^(observability-(off|on|disabled|agent))(, *observability-(off|on|disabled|agent))*$
+          else:
+            - abort: 'Invalid PERF_SCENARIOS value. Allowed values: observability-off, observability-on, observability-disabled, observability-agent'
+
+    # perf_scenarios_param: Initialize state variables for scenario queue management
+    - set-state: SCENARIO_QUEUE []
+    - set-state: SCENARIOS_DONE false
+    - set-state: CURRENT_SCENARIO ""
+
+    # perf_scenarios_param: Convert comma-separated string to array queue
+    - read-state: ${{PERF_SCENARIOS}}
+      then:
+        - js: |
+            (input, state) => {
+              state.SCENARIO_QUEUE = input.split(",").map(s => s.trim());
+            }
+
+    # perf_scenarios_param: Main execution loop - processes scenarios in order from queue
+    # Fixed to use signal instead of state for repeat-until to properly exit loop
+    - repeat-until: SCENARIOS_DONE
+      then:
+
+        # perf_scenarios_param: Pop next scenario from queue
+        - read-state: ${{SCENARIO_QUEUE}}
+          then:
+            - js: |
+                (input, state) => {
+                  if (!input || input.length === 0) {
+                    state.SCENARIOS_DONE = true;
+                  } else {
+                    state.CURRENT_SCENARIO = input.shift();
+                    state.SCENARIO_QUEUE = input;
+                  }
+                }
+
+        # perf_scenarios_param: Check if queue is empty and signal loop completion
+        - read-state: ${{SCENARIOS_DONE}}
+          then:
+            - regex: ^true$
+              then:
+                - log: "No more scenarios. Loop ending"
+                - signal: SCENARIOS_DONE
+              else:
+                # perf_scenarios_param: Log current scenario being executed
+                - read-state: ${{CURRENT_SCENARIO}}
+                  then:
+                    - regex: ^.+$
+                      then:
+                        - log: "Running scenario: ${{CURRENT_SCENARIO}}"
+
+                # perf_scenarios_param: Map scenario name to build type and implementation
+                - read-state: ${{CURRENT_SCENARIO}}
+                  then:
+                    - regex: ^observability-off$
+                      then:
+                        - set-state: RUN.CURRENT_BULD quarkus-extension
+                        - set-state: RUN.CURRENT_IMPLEMENTATION observability-off
+
+                    - regex: ^observability-on$
+                      then:
+                        - set-state: RUN.CURRENT_BULD quarkus-extension
+                        - set-state: RUN.CURRENT_IMPLEMENTATION observability-on
+
+                    - regex: ^observability-disabled$
+                      then:
+                        - set-state: RUN.CURRENT_BULD quarkus
+                        - set-state: RUN.CURRENT_IMPLEMENTATION observability-disabled
+
+                    - regex: ^observability-agent$
+                      then:
+                        - set-state: RUN.CURRENT_BULD quarkus
+                        - set-state: RUN.CURRENT_IMPLEMENTATION observability-agent
+
+                # Execute benchmark
+                - sleep: 15s
+                - script: run-benchmark-server
+
+    # Completion signal
     - signal: BENCHMARK_DONE
+
+# perf_scenarios_param: END
 
   run-benchmark-server:
     - sh: cd ${{WORKDIR}}/observability-perf/${{CURRENT_BULD}}-benchmark
+    # Kill any leftover observability-process Java processes from previous runs before starting a new one
+    - sh: |
+        STALE_PIDS=$(ps --format pid,cmd x | grep 'observability-process' | grep java | grep -v grep | awk '{print $1}')
+        if [ -n "$STALE_PIDS" ]; then
+          echo "Killing stale observability-process PIDs: $STALE_PIDS"
+          kill -9 $STALE_PIDS
+          sleep 2
+        fi
     - set-signal: HYPERFOIL_DONE 1
     - sh: export JAVA_OPTS=""
     - read-state: ${{CURRENT_IMPLEMENTATION}}
@@ -232,7 +333,7 @@ scripts:
             - sh: JAVA_OPTS="$JAVA_OPTS -Dquarkus.otel.traces.sampler.arg=${{SAMPLER_ARG:0.1}}d -Dquarkus.otel.bsp.max.export.batch.size=${{BATCH_SIZE:512}}"
         - regex: observability-agent
           then:
-            - sh: wget -O opentelemetry-javaagent.jar https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/${{OPENTELEMETRY_AGENT_VERSION:v2.11.0}}/opentelemetry-javaagent.jar
+            - sh: wget -O opentelemetry-javaagent.jar https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/${{OPENTELEMETRY_AGENT_VERSION:v2.25.0}}/opentelemetry-javaagent.jar
             - sh: JAVA_OPTS="$JAVA_OPTS -Dotel.traces.sampler=${{SAMPLER:traceidratio}} -Dotel.traces.sampler.arg=${{SAMPLER_ARG:0.1}} -Dotel.bsp.max.export.batch.size=${{BATCH_SIZE:512}} -Dotel.metrics.exporter=none"
             - sh: JAVA_OPTS="$JAVA_OPTS -javaagent:opentelemetry-javaagent.jar"
 
@@ -446,7 +547,7 @@ states:
   CONTAINER_ENGINE: docker
 
   # Versions (leave empty for latest)
-  HYPERFOIL_VERSION: 0.24
+  HYPERFOIL_VERSION: 0.28.0
   POSTGRES_VERSION:
   JAEGER_VERSION:
   OPENTELEMETRY_AGENT_VERSION:
@@ -467,7 +568,7 @@ states:
   PROFILER_ARGS:
 
   ASYNC_PROFILER_REPO_URL: https://github.com/jvm-profiling-tools/async-profiler
-  ASYNC_PROFILER_REPO_COMMIT: v4.0
+  ASYNC_PROFILER_REPO_COMMIT: v4.3
 
   # CPU and memory restrictions
   SERVER_MEMORY:
@@ -479,6 +580,9 @@ states:
 
   # Other options
   SERVER_OPTS:
+
+  # Benchmark control
+  PERF_SCENARIOS: observability-off,observability-on,observability-disabled,observability-agent
 
   # Results
   BENCHMARK_IMPLEMENTATION: []

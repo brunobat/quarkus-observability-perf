@@ -1,33 +1,17 @@
 services:
   jaeger:
     networks:
-      - backend
-    image: jaegertracing/all-in-one:${JAEGER_VERSION:-latest} # Jaeger v1
+      backend:
+        aliases: [ spm_metrics_source ]
+    image: cr.jaegertracing.io/jaegertracing/jaeger:${JAEGER_VERSION:-2.17.0} # Jaeger v2
     volumes:
       - "./jaeger-ui.json:/etc/jaeger/jaeger-ui.json"
-    command: --query.ui-config /etc/jaeger/jaeger-ui.json
+      - "./config.yml:/etc/jaeger/config.yml"
+    command: ["--config", "/etc/jaeger/config.yml"]
     environment:
-      - METRICS_STORAGE_TYPE=prometheus
-      - PROMETHEUS_SERVER_URL=http://prometheus:9090
-      - PROMETHEUS_QUERY_NAMESPACE=${PROMETHEUS_QUERY_NAMESPACE:-}
-      - PROMETHEUS_QUERY_DURATION_UNIT=${PROMETHEUS_QUERY_DURATION_UNIT:-}
-      - PROMETHEUS_QUERY_NORMALIZE_CALLS=true
-      - PROMETHEUS_QUERY_NORMALIZE_DURATION=true
+      - OTEL_ENABLED=true
     ports:
       - "16686:16686"
-
-  otel_collector:
-    networks:
-      backend:
-        # This is the host name used in Prometheus scrape configuration.
-        aliases: [spm_metrics_source]
-    image: otel/opentelemetry-collector-contrib:${OTEL_IMAGE_TAG:-0.112.0}
-    volumes:
-      - ${OTEL_CONFIG_SRC:-./otel-collector-config-connector.yml}:/etc/otelcol/otel-collector-config.yml
-    command: --config /etc/otelcol/otel-collector-config.yml
-    depends_on:
-      - jaeger
-    ports:
       - "8889:8889"
       - "4317:4317"   # OTLP gRPC receiver
       - "4318:4318"   # OTLP HTTP receiver, not yet used by Quarkus, optional
@@ -42,7 +26,7 @@ services:
       - "9090:9090"
 
   database:
-    image: postgres:latest
+    image: postgres:18.3-alpine
     environment:
       POSTGRES_PASSWORD: changeit
       POSTGRES_USER: pguser
